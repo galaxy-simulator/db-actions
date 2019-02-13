@@ -25,6 +25,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -907,8 +908,8 @@ func getCenterOfMass(nodeID int64) structs.Vec2 {
 	return structs.Vec2{X: CenterOfMass[0], Y: CenterOfMass[1]}
 }
 
-// getStarCoordinates gets the star coordinates of a star using a given nodeID. It returns a vector describing the
-// coordinates
+// getStarCoordinates gets the star coordinates of a star using a given nodeID.
+// It returns a vector describing the coordinates
 func getStarCoordinates(nodeID int64) structs.Vec2 {
 	var Coordinates [2]float64
 
@@ -924,4 +925,166 @@ func getStarCoordinates(nodeID int64) structs.Vec2 {
 	fmt.Printf("%v\n", Coordinates)
 
 	return structs.Vec2{X: Coordinates[0], Y: Coordinates[1]}
+}
+
+// CalcAllForces calculates all the forces acting on the given star.
+// The theta value it receives is used by the Barnes-Hut algorithm to determine what
+// stars to include into the calculations
+func CalcAllForces(database *sql.DB, star structs.Star2D, theta float64) structs.Vec2 {
+	db = database
+
+	// calculate all the forces and add them to the list of all forces
+	// this is done recursively
+	// first of all, get the root id
+	log.Println("getting the root ID")
+	rootID := getRootNodeID(1)
+	log.Println("done getting the root ID")
+
+	log.Printf("Calculating the forces acting on the star %v", star)
+	force := CalcAllForcesNode(star, rootID, theta)
+	log.Printf("Done calculating the forces acting on the star %v", star)
+	log.Printf("Force: %v", force)
+
+	return force
+}
+
+// calcAllForces nodes calculates the forces in between a sta	log.Printf("Calculating the forces acting on the star %v", star)r and a node and returns the overall force
+// TODO: implement the calcForce(star, centerOfMass) {...} function
+// TODO: implement the getSubtreeIDs(nodeID) []int64 {...} function
+func CalcAllForcesNode(star structs.Star2D, nodeID int64, theta float64) structs.Vec2 {
+	fmt.Println("-----------------------------------------------------------")
+	log.Printf("NodeID: %d \t star: %v \t theta: %f \t nodeboxwidth: %f", nodeID, star, theta, getBoxWidth(nodeID))
+	var forceX float64
+	var forceY float64
+	var localTheta float64
+
+	if nodeID != 0 {
+		log.Println("Calculating the localtheta")
+		localTheta = calcTheta(star, nodeID)
+		log.Printf("Done calculating theta: %v", localTheta)
+	}
+
+	if localTheta < theta {
+		log.Printf("localTheta < theta")
+		var force structs.Vec2
+
+		// if the nodeID is not zero, use the center of mass as the other star
+		if nodeID != 0 {
+			pseudoStarCoodinates := getCenterOfMass(nodeID)
+			PseudoStar := structs.Star2D{
+				C: structs.Vec2{
+					X: pseudoStarCoodinates.X,
+					Y: pseudoStarCoodinates.Y,
+				},
+				V: structs.Vec2{
+					X: 0,
+					Y: 0,
+				},
+				M: 1000,
+			}
+			log.Printf("PseudoStar: %v", PseudoStar)
+			force = calcForce(star, PseudoStar)
+
+			// else, use the star in the node as the other star
+		} else {
+			if getStarID(nodeID) != 0 {
+				var pseudoStar = getStar(getStarID(nodeID))
+				force = calcForce(star, pseudoStar)
+			}
+		}
+
+		forceX = force.X
+		forceY = force.X
+	} else {
+		log.Printf("localTheta > theta")
+		// iterate over all subtrees and add the forces acting through them
+		var subtreeIDs [4]int64
+		subtreeIDs = getSubtreeIDs(nodeID)
+		for _, subtreeID := range subtreeIDs {
+
+			// don't recurse into
+			if subtreeID != 0 {
+				var force = CalcAllForcesNode(star, subtreeID, theta)
+				log.Printf("force: %v", force)
+				forceX += force.X
+				forceY += force.Y
+			}
+		}
+	}
+	return structs.Vec2{forceX, forceY}
+}
+
+// calcTheta calculates the theat for a given star and a node
+func calcTheta(star structs.Star2D, nodeID int64) float64 {
+	d := getBoxWidth(nodeID)
+	r := distance(star, nodeID)
+	theta := d / r
+	return theta
+}
+
+// calculate the distance in between the star and the node with the given ID
+func distance(star structs.Star2D, nodeID int64) float64 {
+	var starX float64 = star.C.X
+	var starY float64 = star.C.Y
+	var node structs.Vec2 = getNodeCenterOfMass(nodeID)
+	var nodeX float64 = node.X
+	var nodeY float64 = node.Y
+
+	var tmpX = math.Pow(starX-nodeX, 2)
+	var tmpY = math.Pow(starY-nodeY, 2)
+
+	var distance float64 = math.Sqrt(tmpX + tmpY)
+	return distance
+}
+
+// getNodeCenterOfMass returns the center of mass of the node with the given ID
+func getNodeCenterOfMass(nodeID int64) structs.Vec2 {
+	var Coordinates [2]float64
+
+	// get the star from the stars table
+	query := fmt.Sprintf("SELECT center_of_mass[1], center_of_mass[2] FROM nodes WHERE node_id=%d", nodeID)
+	err := db.QueryRow(query).Scan(&Coordinates[0], &Coordinates[1])
+	if err != nil {
+		log.Fatalf("[ E ] getNodeCenterOfMass query: %v \n\t\t\tquery: %s\n", err, query)
+	}
+
+	return structs.Vec2{X: Coordinates[0], Y: Coordinates[1]}
+}
+
+// getSubtreeIDs returns the id of the subtrees of the nodeID
+func getSubtreeIDs(nodeID int64) [4]int64 {
+
+	var subtreeIDs [4]int64
+
+	// get the star from the stars table
+	query := fmt.Sprintf("SELECT subnode[1], subnode[2], subnode[3], subnode[4] FROM nodes WHERE node_id=%d", nodeID)
+	err := db.QueryRow(query).Scan(&subtreeIDs[0], &subtreeIDs[1], &subtreeIDs[2], &subtreeIDs[3])
+	if err != nil {
+		log.Fatalf("[ E ] getSubtreeIDs query: %v \n\t\t\tquery: %s\n", err, query)
+	}
+
+	return subtreeIDs
+}
+
+func calcForce(s1 structs.Star2D, s2 structs.Star2D) structs.Vec2 {
+	log.Println("+++++++++++++++++++++++++")
+	log.Printf("Calculating the force acting inbetween %f and %f", s1, s2)
+	G := 6.6726 * math.Pow(10, -11)
+
+	// calculate the force acting
+	var combinedMass float64 = s1.M * s2.M
+	var distance float64 = math.Sqrt(math.Pow(math.Abs(s1.C.X-s2.C.X), 2) + math.Pow(math.Abs(s1.C.Y-s2.C.Y), 2))
+
+	var scalar float64 = G * ((combinedMass) / math.Pow(distance, 2))
+
+	// define a unit vector pointing from s1 to s2
+	var vector structs.Vec2 = structs.Vec2{s2.C.X - s1.C.X, s2.C.Y - s1.C.Y}
+	var UnitVector structs.Vec2 = structs.Vec2{vector.X / distance, vector.Y / distance}
+
+	// multiply the vector with the force to get a vector representing the force acting
+	var force structs.Vec2 = UnitVector.Multiply(scalar)
+	log.Println("+++++++++++++++++++++++++")
+
+	// return the force exerted on s1 by s2
+	return force
 }
