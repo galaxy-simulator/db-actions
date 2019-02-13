@@ -593,6 +593,50 @@ func GetListOfStarsCsv(database *sql.DB) []string {
 	return starList
 }
 
+// getListOfStarsTreeCsv returns an array of strings containing the coordinates of all the stars in the given tree
+func GetListOfStarsTree(database *sql.DB, treeindex int64) []structs.Star2D {
+	db = database
+
+	// build the query
+	query := fmt.Sprintf("SELECT * FROM stars WHERE star_id IN(SELECT star_id FROM nodes WHERE timestep=%d)", treeindex)
+
+	// Execute the query
+	rows, err := db.Query(query)
+	defer rows.Close()
+	if err != nil {
+		log.Fatalf("[ E ] removeStarFromNode query: %v\n\t\t\t query: %s\n", err, query)
+	}
+
+	var starList []structs.Star2D
+
+	// iterate over the returned rows
+	for rows.Next() {
+
+		var starID int64
+		var x, y, vx, vy, m float64
+		scanErr := rows.Scan(&starID, &x, &y, &vx, &vy, &m)
+		if scanErr != nil {
+			log.Fatalf("[ E ] scan error: %v", scanErr)
+		}
+
+		star := structs.Star2D{
+			C: structs.Vec2{
+				X: x,
+				Y: y,
+			},
+			V: structs.Vec2{
+				X: vx,
+				Y: vy,
+			},
+			M: m,
+		}
+
+		starList = append(starList, star)
+	}
+
+	return starList
+}
+
 // insertList inserts all the stars in the given .csv into the stars and nodes table
 func InsertList(database *sql.DB, filename string) {
 	db = database
