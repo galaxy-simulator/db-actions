@@ -715,7 +715,7 @@ func updateTotalMassNode(nodeID int64) float64 {
 	if err != nil {
 		log.Fatalf("[ E ] updateTotalMassNode query: %v\n\t\t\t query: %s\n", err, query)
 	}
-
+	// TODO: implement the getSubtreeIDs(nodeID) []int64 {...} function
 	// iterate over all subnodes updating their total masses
 	for _, subnodeID := range subnode {
 		fmt.Println("----------------------------")
@@ -930,14 +930,14 @@ func getStarCoordinates(nodeID int64) structs.Vec2 {
 // CalcAllForces calculates all the forces acting on the given star.
 // The theta value it receives is used by the Barnes-Hut algorithm to determine what
 // stars to include into the calculations
-func CalcAllForces(database *sql.DB, star structs.Star2D, theta float64) structs.Vec2 {
+func CalcAllForces(database *sql.DB, star structs.Star2D, galaxyIndex int64, theta float64) structs.Vec2 {
 	db = database
 
 	// calculate all the forces and add them to the list of all forces
 	// this is done recursively
 	// first of all, get the root id
 	log.Println("getting the root ID")
-	rootID := getRootNodeID(1)
+	rootID := getRootNodeID(galaxyIndex)
 	log.Println("done getting the root ID")
 
 	log.Printf("Calculating the forces acting on the star %v", star)
