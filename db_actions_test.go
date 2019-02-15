@@ -210,3 +210,51 @@ func TestInsertStar(t *testing.T) {
 		})
 	}
 }
+
+func TestGetListOfStarsTree(t *testing.T) {
+	// define a database
+	db = ConnectToDB()
+	db.SetMaxOpenConns(75)
+
+	type args struct {
+		database  *sql.DB
+		treeindex int64
+	}
+	tests := []struct {
+		name string
+		args args
+		want []structs.Star2D
+	}{
+		{
+			name: "Get all stars for the treeindex 1",
+			args: args{
+				database:  db,
+				treeindex: 1,
+			},
+			want: []structs.Star2D{
+				{
+					C: structs.Vec2{300, 300},
+					V: structs.Vec2{0.1, 0.3},
+					M: 1,
+				},
+				{
+					C: structs.Vec2{200, 200},
+					V: structs.Vec2{0.1, 0.3},
+					M: 2,
+				},
+				{
+					C: structs.Vec2{400, 400},
+					V: structs.Vec2{0.1, 0.3},
+					M: 4,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetListOfStarsTree(tt.args.database, tt.args.treeindex); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetListOfStarsTree() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
