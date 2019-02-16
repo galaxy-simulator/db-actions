@@ -107,6 +107,28 @@ func TestCalcAllForces(t *testing.T) {
 				Y: 0,
 			},
 		},
+		{
+			name: "star in the far top right quadrant",
+			args: args{
+				database: db,
+				star: structs.Star2D{
+					C: structs.Vec2{
+						X: 475,
+						Y: 25,
+					},
+					V: structs.Vec2{
+						X: 0,
+						Y: 0,
+					},
+					M: 1000,
+				},
+				theta: 1.5,
+			},
+			want: structs.Vec2{
+				X: -2.945139150499052e-10,
+				Y: -2.945139150499052e-10,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
