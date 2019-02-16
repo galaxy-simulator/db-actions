@@ -47,8 +47,8 @@ func TestCalcAllForces(t *testing.T) {
 				database: db,
 				star: structs.Star2D{
 					C: structs.Vec2{
-						X: 100,
-						Y: 100,
+						X: 275,
+						Y: 275,
 					},
 					V: structs.Vec2{
 						X: 0,
@@ -118,7 +118,7 @@ func TestCalcAllForces(t *testing.T) {
 }
 
 func TestInsertStar(t *testing.T) {
-	// define a database
+	// define the connection to a database
 	db = ConnectToDB()
 	db.SetMaxOpenConns(75)
 
@@ -132,7 +132,7 @@ func TestInsertStar(t *testing.T) {
 		args args
 	}{
 		{
-			name: "Insert a star into the database",
+			name: "1. Insert (100, 100) in time step 1",
 			args: args{
 				database: db,
 				star: structs.Star2D{
@@ -150,7 +150,7 @@ func TestInsertStar(t *testing.T) {
 			},
 		},
 		{
-			name: "Insert a star into the database",
+			name: "2. Insert (150, 150) in time step 1",
 			args: args{
 				database: db,
 				star: structs.Star2D{
@@ -168,13 +168,13 @@ func TestInsertStar(t *testing.T) {
 			},
 		},
 		{
-			name: "Insert a star into the database",
+			name: "3. Insert (100, 100) in time step 2",
 			args: args{
 				database: db,
 				star: structs.Star2D{
 					C: structs.Vec2{
-						X: 150,
-						Y: 150,
+						X: 100,
+						Y: 100,
 					},
 					V: structs.Vec2{
 						X: 0,
@@ -186,13 +186,13 @@ func TestInsertStar(t *testing.T) {
 			},
 		},
 		{
-			name: "Insert a star into the database",
+			name: "4. Insert (150, 150) in time step 2",
 			args: args{
 				database: db,
 				star: structs.Star2D{
 					C: structs.Vec2{
-						X: 100,
-						Y: 100,
+						X: 150,
+						Y: 150,
 					},
 					V: structs.Vec2{
 						X: 0,
