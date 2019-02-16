@@ -144,7 +144,7 @@ func insertIntoStars(star structs.Star2D) int64 {
 
 // insert into tree inserts the given star into the tree starting at the node with the given node id
 func insertIntoTree(starID int64, nodeID int64) {
-	//starRaw := getStar(starID)
+	//starRaw := GetStar(starID)
 	//nodeCenter := getBoxCenter(nodeID)
 	//nodeWidth := getBoxWidth(nodeID)
 	//log.Printf("[   ] \t Inserting star %v into the node (c: %v, w: %v)", starRaw, nodeCenter, nodeWidth)
@@ -177,14 +177,14 @@ func insertIntoTree(starID int64, nodeID int64) {
 
 		// Stage 1: Inserting the blocking star
 		blockingStarID := getStarID(nodeID)                               // get the id of the star blocking the node
-		blockingStar := getStar(blockingStarID)                           // get the actual star
+		blockingStar := GetStar(blockingStarID)                           // get the actual star
 		blockingStarQuadrant := quadrant(blockingStar, nodeID)            // find out in which quadrant it belongs
 		quadrantNodeID := getQuadrantNodeID(nodeID, blockingStarQuadrant) // get the nodeID of that quadrant
 		insertIntoTree(blockingStarID, quadrantNodeID)                    // insert the star into that node
 		removeStarFromNode(nodeID)                                        // remove the blocking star from the node it was blocking
 
 		// Stage 1: Inserting the actual star
-		star := getStar(starID)                                  // get the actual star
+		star := GetStar(starID)                                  // get the actual star
 		starQuadrant := quadrant(star, nodeID)                   // find out in which quadrant it belongs
 		quadrantNodeID = getQuadrantNodeID(nodeID, starQuadrant) // get the nodeID of that quadrant
 		insertIntoTree(starID, nodeID)
@@ -204,14 +204,14 @@ func insertIntoTree(starID int64, nodeID int64) {
 		//log.Printf("Case 3, \t %v \t %v", nodeWidth, nodeCenter)
 		// Stage 1: Inserting the blocking star
 		blockingStarID := getStarID(nodeID)                               // get the id of the star blocking the node
-		blockingStar := getStar(blockingStarID)                           // get the actual star
+		blockingStar := GetStar(blockingStarID)                           // get the actual star
 		blockingStarQuadrant := quadrant(blockingStar, nodeID)            // find out in which quadrant it belongs
 		quadrantNodeID := getQuadrantNodeID(nodeID, blockingStarQuadrant) // get the nodeID of that quadrant
 		insertIntoTree(blockingStarID, quadrantNodeID)                    // insert the star into that node
 		removeStarFromNode(nodeID)                                        // remove the blocking star from the node it was blocking
 
 		// Stage 1: Inserting the actual star
-		star := getStar(blockingStarID)                          // get the actual star
+		star := GetStar(blockingStarID)                          // get the actual star
 		starQuadrant := quadrant(star, nodeID)                   // find out in which quadrant it belongs
 		quadrantNodeID = getQuadrantNodeID(nodeID, starQuadrant) // get the nodeID of that quadrant
 		insertIntoTree(starID, nodeID)
@@ -221,7 +221,7 @@ func insertIntoTree(starID int64, nodeID int64) {
 	// insert the new star into the according subtree
 	if isLeaf == false && containsStar == false {
 		//log.Printf("Case 4, \t %v \t %v", nodeWidth, nodeCenter)
-		star := getStar(starID)                                   // get the actual star
+		star := GetStar(starID)                                   // get the actual star
 		starQuadrant := quadrant(star, nodeID)                    // find out in which quadrant it belongs
 		quadrantNodeID := getQuadrantNodeID(nodeID, starQuadrant) // get the if of that quadrant
 		insertIntoTree(starID, quadrantNodeID)                    // insert the star into that quadrant
@@ -498,7 +498,7 @@ func getQuadrantNodeID(parentNodeID int64, quadrant int64) int64 {
 	return -1
 }
 
-// getStar returns the star with the given ID from the stars table
+// GetStar returns the star with the given ID from the stars table
 func GetStar(starID int64) structs.Star2D {
 	var x, y, vx, vy, m float64
 
@@ -506,7 +506,7 @@ func GetStar(starID int64) structs.Star2D {
 	query := fmt.Sprintf("SELECT x, y, vx, vy, m FROM stars WHERE star_id=%d", starID)
 	err := db.QueryRow(query).Scan(&x, &y, &vx, &vy, &m)
 	if err != nil {
-		log.Fatalf("[ E ] getStar query: %v \n\t\t\tquery: %s\n", err, query)
+		log.Fatalf("[ E ] GetStar query: %v \n\t\t\tquery: %s\n", err, query)
 	}
 
 	star := structs.Star2D{
@@ -926,7 +926,7 @@ func updateCenterOfMassNode(nodeID int64) structs.Vec2 {
 			}
 		} else {
 			log.Printf("[   ] NodeID: %v", starID)
-			star := getStar(starID)
+			star := GetStar(starID)
 			centerOfMassX := star.C.X
 			centerOfMassY := star.C.Y
 			centerOfMass = structs.Vec2{
@@ -1036,7 +1036,7 @@ func getStarCoordinates(nodeID int64) structs.Vec2 {
 // updateStarForce updates the force acting on the star
 func updateStarForce(db *sql.DB, starID int64, force structs.Vec2) structs.Star2D {
 
-	star := getStar(starID)
+	star := GetStar(starID)
 	newStar := structs.Star2D{
 		structs.Vec2{star.C.X, star.C.Y},
 		structs.Vec2{force.X, force.Y},
@@ -1110,7 +1110,7 @@ func CalcAllForcesNode(star structs.Star2D, nodeID int64, theta float64) structs
 			if subtreeID != 0 {
 				subtreeStarId := getStarID(subtreeID)
 				if subtreeStarId != 0 {
-					var localStar = getStar(subtreeStarId)
+					var localStar = GetStar(subtreeStarId)
 					log.Printf("subtree %d star: %v", i, localStar)
 					if localStar != star {
 						log.Println("Not even the original star, calculating forces...")
@@ -1153,7 +1153,7 @@ func CalcAllForcesNode(star structs.Star2D, nodeID int64, theta float64) structs
 	//		// else, use the star in the node as the other star
 	//	} else {
 	//		if getStarID(nodeID) != 0 {
-	//			var pseudoStar = getStar(getStarID(nodeID))
+	//			var pseudoStar = GetStar(getStarID(nodeID))
 	//			force = calcForce(star, pseudoStar)
 	//		}
 	//	}
