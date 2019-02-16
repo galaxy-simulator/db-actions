@@ -87,7 +87,7 @@ func NewTree(database *sql.DB, width float64) {
 }
 
 // insertStar inserts the given star into the stars table and the nodes table tree
-func InsertStar(database *sql.DB, star structs.Star2D, index int64) {
+func InsertStar(database *sql.DB, star structs.Star2D, index int64) int64 {
 	db = database
 	start := time.Now()
 
@@ -117,6 +117,7 @@ func InsertStar(database *sql.DB, star structs.Star2D, index int64) {
 	insertIntoTree(starID, id)
 	elapsedTime := time.Since(start)
 	log.Printf("\t\t\t\t\t %s", elapsedTime)
+	return starID
 }
 
 // insertIntoStars inserts the given star into the stars table
