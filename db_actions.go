@@ -608,9 +608,66 @@ func GetListOfStarsGo(database *sql.DB) []structs.Star2D {
 	return starList
 }
 
+// GetListOfStarIDs returns a list of all star ids in the stars table
+func GetListOfStarIDs(db *sql.DB) []int64 {
+	// build the query
+	query := fmt.Sprintf("SELECT star_id FROM stars")
+
+	// Execute the query
+	rows, err := db.Query(query)
+	defer rows.Close()
+	if err != nil {
+		log.Fatalf("[ E ] GetListOfStarIDs query: %v\n\t\t\t query: %s\n", err, query)
+	}
+
+	var starIDList []int64
+
+	// iterate over the returned rows
+	for rows.Next() {
+
+		var starID int64
+		scanErr := rows.Scan(&starID)
+		if scanErr != nil {
+			log.Fatalf("[ E ] scan error: %v", scanErr)
+		}
+
+		starIDList = append(starIDList, starID)
+	}
+
+	return starIDList
+}
+
+// GetListOfStarIDs returns a list of all star ids in the stars table with the given timestep
+func GetListOfStarIDsTimestep(db *sql.DB, timestep int64) []int64 {
+	// build the query
+	query := fmt.Sprintf("SELECT star_id FROM nodes WHERE star_id<>0 AND timestep=%d", timestep)
+
+	// Execute the query
+	rows, err := db.Query(query)
+	defer rows.Close()
+	if err != nil {
+		log.Fatalf("[ E ] GetListOfStarIDsTimestep query: %v\n\t\t\t query: %s\n", err, query)
+	}
+
+	var starIDList []int64
+
+	// iterate over the returned rows
+	for rows.Next() {
+
+		var starID int64
+		scanErr := rows.Scan(&starID)
+		if scanErr != nil {
+			log.Fatalf("[ E ] scan error: %v", scanErr)
+		}
+
+		starIDList = append(starIDList, starID)
+	}
+
+	return starIDList
+}
+
 // getListOfStarsCsv returns an array of strings containing the coordinates of all the stars in the stars table
-func GetListOfStarsCsv(database *sql.DB) []string {
-	db = database
+func GetListOfStarsCsv(db *sql.DB) []string {
 	// build the query
 	query := fmt.Sprintf("SELECT * FROM stars")
 
@@ -618,7 +675,7 @@ func GetListOfStarsCsv(database *sql.DB) []string {
 	rows, err := db.Query(query)
 	defer rows.Close()
 	if err != nil {
-		log.Fatalf("[ E ] removeStarFromNode query: %v\n\t\t\t query: %s\n", err, query)
+		log.Fatalf("[ E ] getListOfStarsCsv query: %v\n\t\t\t query: %s\n", err, query)
 	}
 
 	var starList []string
@@ -732,11 +789,14 @@ func InsertList(database *sql.DB, filename string) {
 func getRootNodeID(index int64) int64 {
 	var nodeID int64
 
+	log.Printf("Preparing query with the root id %d", index)
 	query := fmt.Sprintf("SELECT node_id FROM nodes WHERE root_id=%d", index)
+	log.Printf("Sending query")
 	err := db.QueryRow(query).Scan(&nodeID)
 	if err != nil {
 		log.Fatalf("[ E ] getRootNodeID query: %v\n\t\t\t query: %s\n", err, query)
 	}
+	log.Printf("Done Sending query")
 
 	return nodeID
 }
@@ -973,6 +1033,27 @@ func getStarCoordinates(nodeID int64) structs.Vec2 {
 	return structs.Vec2{X: Coordinates[0], Y: Coordinates[1]}
 }
 
+// updateStarForce updates the force acting on the star
+func updateStarForce(db *sql.DB, starID int64, force structs.Vec2) structs.Star2D {
+
+	star := getStar(starID)
+	newStar := structs.Star2D{
+		structs.Vec2{star.C.X, star.C.Y},
+		structs.Vec2{force.X, force.Y},
+		star.M,
+	}
+
+	// updated the stars Force
+	query := fmt.Sprintf("UPDATE stars SET vx=%f, vy=%f WHERE star_id=%d", force.X, force.Y, starID)
+	rows, err := db.Query(query)
+	defer rows.Close()
+	if err != nil {
+		log.Fatalf("[ E ] updateStarForce query: %v\n\t\t\t query: %s\n", err, query)
+	}
+
+	return newStar
+}
+
 // CalcAllForces calculates all the forces acting on the given star.
 // The theta value it receives is used by the Barnes-Hut algorithm to determine what
 // stars to include into the calculations
@@ -1004,59 +1085,101 @@ func CalcAllForcesNode(star structs.Star2D, nodeID int64, theta float64) structs
 	var forceY float64
 	var localTheta float64
 
+	nodeWidth := getBoxWidth(nodeID)
+
 	if nodeID != 0 {
-		log.Println("Calculating the localtheta")
+		log.Println("[theta] Calculating localtheta(star, node)")
+		log.Printf("[theta] node with: %f", nodeWidth)
 		localTheta = calcTheta(star, nodeID)
-		log.Printf("Done calculating theta: %v", localTheta)
+		log.Printf("[theta] Done calculating localtheta: %v", localTheta)
 	}
 
+	// recurse deeper into the tree
 	if localTheta < theta {
-		log.Printf("localTheta < theta")
-		var force structs.Vec2
+		log.Println("[   ] localtheta < theta")
 
-		// if the nodeID is not zero, use the center of mass as the other star
-		if nodeID != 0 {
-			pseudoStarCoodinates := getCenterOfMass(nodeID)
-			PseudoStar := structs.Star2D{
-				C: structs.Vec2{
-					X: pseudoStarCoodinates.X,
-					Y: pseudoStarCoodinates.Y,
-				},
-				V: structs.Vec2{
-					X: 0,
-					Y: 0,
-				},
-				M: 1000,
-			}
-			log.Printf("PseudoStar: %v", PseudoStar)
-			force = calcForce(star, PseudoStar)
-
-			// else, use the star in the node as the other star
-		} else {
-			if getStarID(nodeID) != 0 {
-				var pseudoStar = getStar(getStarID(nodeID))
-				force = calcForce(star, pseudoStar)
-			}
-		}
-
-		forceX = force.X
-		forceY = force.X
 	} else {
-		log.Printf("localTheta > theta")
-		// iterate over all subtrees and add the forces acting through them
+		log.Println("[   ] localtheta > theta")
+
+		log.Printf("[   ] Iterating over subtrees")
 		var subtreeIDs [4]int64
 		subtreeIDs = getSubtreeIDs(nodeID)
-		for _, subtreeID := range subtreeIDs {
+		for i, subtreeID := range subtreeIDs {
+			log.Printf("Subtree: %d\t ID: %d", i, subtreeID)
 
-			// don't recurse into
 			if subtreeID != 0 {
+				subtreeStarId := getStarID(subtreeID)
+				if subtreeStarId != 0 {
+					var localStar = getStar(subtreeStarId)
+					log.Printf("subtree %d star: %v", i, localStar)
+					if localStar != star {
+						log.Println("Not even the original star, calculating forces...")
+						var force = calcForce(localStar, star)
+						forceX += force.X
+						forceY += force.Y
+					}
+				}
 				var force = CalcAllForcesNode(star, subtreeID, theta)
 				log.Printf("force: %v", force)
 				forceX += force.X
 				forceY += force.Y
 			}
 		}
+
 	}
+
+	//// dont't recurse deeper into the tree
+	//if localTheta < theta {
+	//	log.Printf("localTheta < theta")
+	//	var force structs.Vec2
+	//
+	//	// if the nodeID is not zero, use the center of mass as the other star
+	//	if nodeID != 0 {
+	//		pseudoStarCoodinates := getCenterOfMass(nodeID)
+	//		PseudoStar := structs.Star2D{
+	//			C: structs.Vec2{
+	//				X: pseudoStarCoodinates.X,
+	//				Y: pseudoStarCoodinates.Y,
+	//			},
+	//			V: structs.Vec2{
+	//				X: 0,
+	//				Y: 0,
+	//			},
+	//			M: 1000,
+	//		}
+	//		log.Printf("PseudoStar: %v", PseudoStar)
+	//		force = calcForce(star, PseudoStar)
+	//
+	//		// else, use the star in the node as the other star
+	//	} else {
+	//		if getStarID(nodeID) != 0 {
+	//			var pseudoStar = getStar(getStarID(nodeID))
+	//			force = calcForce(star, pseudoStar)
+	//		}
+	//	}
+	//
+	//	forceX = force.X
+	//	forceY = force.X
+	//
+	//// recurse deeper into the tree
+	//} else {
+	//	log.Printf("localTheta > theta")
+	//	// iterate over all subtrees and add the forces acting through them
+	//	var subtreeIDs [4]int64
+	//	subtreeIDs = getSubtreeIDs(nodeID)
+	//	for i, subtreeID := range subtreeIDs {
+	//		fmt.Printf("Subtree: %d", i)
+	//
+	//		// don't recurse into
+	//		if subtreeID != 0 {
+	//			var force = CalcAllForcesNode(star, subtreeID, theta)
+	//			log.Printf("force: %v", force)
+	//			forceX += force.X
+	//			forceY += force.Y
+	//		}
+	//	}
+	//}
+	log.Println("---------------------------------------")
 	return structs.Vec2{forceX, forceY}
 }
 
@@ -1112,16 +1235,22 @@ func getSubtreeIDs(nodeID int64) [4]int64 {
 	return subtreeIDs
 }
 
+// calcForce calculates the force the star s1 is acting on s2.
+// The force acting is returned in Newtons.
 func calcForce(s1 structs.Star2D, s2 structs.Star2D) structs.Vec2 {
 	log.Println("+++++++++++++++++++++++++")
-	log.Printf("Calculating the force acting inbetween %f and %f", s1, s2)
+	log.Printf("s1: %v", s1)
+	log.Printf("s2: %v", s2)
 	G := 6.6726 * math.Pow(10, -11)
 
 	// calculate the force acting
 	var combinedMass float64 = s1.M * s2.M
 	var distance float64 = math.Sqrt(math.Pow(math.Abs(s1.C.X-s2.C.X), 2) + math.Pow(math.Abs(s1.C.Y-s2.C.Y), 2))
+	log.Printf("combined mass: %f", combinedMass)
+	log.Printf("distance: %f", distance)
 
 	var scalar float64 = G * ((combinedMass) / math.Pow(distance, 2))
+	log.Printf("scalar: %f", scalar)
 
 	// define a unit vector pointing from s1 to s2
 	var vector structs.Vec2 = structs.Vec2{s2.C.X - s1.C.X, s2.C.Y - s1.C.Y}
