@@ -232,6 +232,42 @@ func TestInsertStar(t *testing.T) {
 				index: 2,
 			},
 		},
+		{
+			name: "5.1. Insert (150, 150) in time step 3 (proximity-test 1)",
+			args: args{
+				database: db,
+				star: structs.Star2D{
+					C: structs.Vec2{
+						X: 150,
+						Y: 150,
+					},
+					V: structs.Vec2{
+						X: 0,
+						Y: 0,
+					},
+					M: 1000,
+				},
+				index: 3,
+			},
+		},
+		{
+			name: "5.2. Insert (151, 151) in time step 3 (proximity-test 1)",
+			args: args{
+				database: db,
+				star: structs.Star2D{
+					C: structs.Vec2{
+						X: 151,
+						Y: 151,
+					},
+					V: structs.Vec2{
+						X: 0,
+						Y: 0,
+					},
+					M: 1000,
+				},
+				index: 3,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
