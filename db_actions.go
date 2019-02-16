@@ -524,6 +524,20 @@ func GetStar(starID int64) structs.Star2D {
 	return star
 }
 
+// getStarIDTimestep returns the timestep the given starID is currently inside of
+func GetStarIDTimestep(starID int64) int64 {
+	var timestep int64
+
+	// get the star from the stars table
+	query := fmt.Sprintf("SELECT timestep FROM nodes WHERE star_id=%d", starID)
+	err := db.QueryRow(query).Scan(&timestep)
+	if err != nil {
+		log.Fatalf("[ E ] GetStar query: %v \n\t\t\tquery: %s\n", err, query)
+	}
+
+	return timestep
+}
+
 // getStarMass returns the mass if the star with the given ID
 func getStarMass(starID int64) float64 {
 	var mass float64
