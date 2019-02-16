@@ -144,6 +144,13 @@ func TestInsertStar(t *testing.T) {
 	db = ConnectToDB()
 	db.SetMaxOpenConns(75)
 
+	// delete all preexisting stars and nodes
+	DeleteAllStars(db)
+	DeleteAllNodes(db)
+
+	// create a new tree with a width of 1000
+	NewTree(db, 1000)
+
 	type args struct {
 		database *sql.DB
 		star     structs.Star2D
