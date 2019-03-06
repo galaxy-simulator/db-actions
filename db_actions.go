@@ -1289,7 +1289,7 @@ func InitStarsTable(db *sql.DB) {
     m numeric
 )
 `
-	err := db.QueryRow(query)
+	_, err := db.Exec(query)
 	if err != nil {
 		log.Fatalf("[ E ] InitNodesTable query: %v \n\t\t\tquery: %s\n", err, query)
 	}
@@ -1310,7 +1310,7 @@ func InitNodesTable(db *sql.DB) {
 		subnodes bigint[] NOT NULL
 	)
 `
-	err := db.QueryRow(query)
+	_, err := db.Exec(query)
 	if err != nil {
 		log.Fatalf("[ E ] InitNodesTable query: %v \n\t\t\tquery: %s\n", err, query)
 	}
