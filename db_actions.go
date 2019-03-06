@@ -43,8 +43,8 @@ var (
 )
 
 // connectToDB returns a pointer to an sql database writing to the database
-func ConnectToDB() *sql.DB {
-	connStr := fmt.Sprintf("user=%s dbname=%s sslmode=%s", DBUSER, DBNAME, DBSSLMODE)
+func ConnectToDB(dbname) *sql.DB {
+	connStr := fmt.Sprintf("user=%s dbname=%s sslmode=%s", DBUSER, dbname, DBSSLMODE)
 	db := dbConnect(connStr)
 	return db
 }
