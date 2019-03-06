@@ -1288,13 +1288,6 @@ func InitStarsTable(db *sql.DB) {
     vy numeric,
     m numeric
 )
-WITH (
-    OIDS = FALSE
-)
-TABLESPACE pg_default;
-
-ALTER TABLE public.stars
-    OWNER to postgres;
 `
 	err := db.QueryRow(query)
 	if err != nil {
@@ -1316,13 +1309,6 @@ func InitNodesTable(db *sql.DB) {
 		center_of_mass numeric[] NOT NULL,
 		subnodes bigint[] NOT NULL
 	)
-	WITH (
-		OIDS = FALSE
-	)
-	TABLESPACE pg_default;
-
-	ALTER TABLE public.nodes
-	OWNER to postgres;
 `
 	err := db.QueryRow(query)
 	if err != nil {
