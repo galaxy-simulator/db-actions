@@ -525,7 +525,7 @@ func GetStar(db *sql.DB, starID int64) structs.Star2D {
 }
 
 // getStarIDTimestep returns the timestep the given starID is currently inside of
-func GetStarIDTimestep(starID int64) int64 {
+func GetStarIDTimestep(db *sql.DB, starID int64) int64 {
 	var timestep int64
 
 	// get the star from the stars table
