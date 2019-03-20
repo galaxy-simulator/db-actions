@@ -499,7 +499,7 @@ func getQuadrantNodeID(parentNodeID int64, quadrant int64) int64 {
 }
 
 // GetStar returns the star with the given ID from the stars table
-func GetStar(starID int64) structs.Star2D {
+func GetStar(db *sql.DB, starID int64) structs.Star2D {
 	var x, y, vx, vy, m float64
 
 	// get the star from the stars table
